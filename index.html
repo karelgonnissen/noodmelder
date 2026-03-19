@@ -5,63 +5,100 @@
     <title>Live Noodmelder</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; transition: background 0.5s; }
-        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; width: 80%; }
-        .alarm { background-color: #e74c3c !important; color: white; }
-        .alarm .card { border: 5px solid white; }
-        h1 { font-size: 3rem; }
-        #bericht { font-size: 1.5rem; margin: 20px 0; }
-        .blink { animation: blinker 1s linear infinite; }
-        @keyframes blinker { 50% { opacity: 0; } }
+        /* Basis instellingen */
+        body { 
+            font-family: 'Segoe UI', sans-serif; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh; 
+            margin: 0; 
+            transition: background 0.3s; 
+            background-color: #f4f4f4;
+        }
+
+        /* De witte kaart in het midden */
+        .card { 
+            background: white; 
+            padding: 40px; 
+            border-radius: 25px; 
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3); 
+            text-align: center; 
+            width: 85%; 
+            max-width: 700px;
+            color: #333; /* FORCEER DONKERE TEKST OP WITTE KAART */
+        }
+
+        /* Alarm stand voor de achtergrond */
+        .alarm-bg { 
+            background-color: #e74c3c !important; 
+        }
+
+        /* Tekst stijlen */
+        h1 { font-size: 3.5rem; margin: 10px 0; color: #2c3e50; }
+        .alarm-bg h1 { color: #c0392b; } /* Donkerrood in de witte kaart bij alarm */
+        
+        #bericht { 
+            font-size: 2rem; 
+            margin: 25px 0; 
+            line-height: 1.4;
+            font-weight: bold;
+            color: #000; /* ALTIJD ZWART */
+        }
+
+        .status-footer { font-size: 0.9rem; color: #7f8c8d; margin-top: 20px; }
+
+        /* Knipperen van de kaart bij alarm */
+        .blink-border { 
+            border: 10px solid #e74c3c;
+            animation: blinker 1s linear infinite; 
+        }
+        @keyframes blinker { 50% { border-color: transparent; } }
     </style>
 </head>
-<body>
+<body id="bg">
 
-<div class="card">
+<div class="card" id="main-card">
     <h1 id="header">✅ Systeem OK</h1>
-    <p id="bericht">Bezig met laden van status...</p>
-    <p style="font-size: 0.8rem; color: #888;">Laatst gecontroleerd: <span id="last-check">--:--</span></p>
+    <div id="bericht">Bezig met laden van status...</div>
+    <div class="status-footer">Laatst gecontroleerd: <span id="last-check">--:--:--</span></div>
 </div>
 
 <audio id="alarm-sound" src="https://actions.google.com/sounds/v1/alarms/emergency_it_is_an_emergency.ogg"></audio>
 
 <script>
-    const statusUrl = 'melding.json'; // Pakt het bestand uit dezelfde map
-
     async function checkStatus() {
         try {
-            // Voorkom dat de browser een oude versie uit het geheugen pakt (cache-busting)
-            const response = await fetch(statusUrl + '?t=' + new Date().getTime());
+            const response = await fetch('melding.json?t=' + new Date().getTime());
             const data = await response.json();
             
-            const body = document.body;
+            const body = document.getElementById('bg');
+            const card = document.getElementById('main-card');
             const header = document.getElementById('header');
             const berichtText = document.getElementById('bericht');
             const sound = document.getElementById('alarm-sound');
 
             if (data.status === "alarm") {
-                body.className = "alarm";
+                body.classList.add("alarm-bg");
+                card.classList.add("blink-border");
                 header.innerText = "🚨 NOODSITUATIE";
-                header.classList.add("blink");
                 berichtText.innerText = data.bericht;
-                sound.play(); // Speelt alarmgeluid af
+                sound.play();
             } else {
-                body.className = "";
+                body.classList.remove("alarm-bg");
+                card.classList.remove("blink-border");
                 header.innerText = "✅ Systeem OK";
-                header.classList.remove("blink");
                 berichtText.innerText = data.bericht;
                 sound.pause();
                 sound.currentTime = 0;
             }
             document.getElementById('last-check').innerText = new Date().toLocaleTimeString();
         } catch (error) {
-            console.error("Fout bij ophalen status:", error);
+            console.error("Status check mislukt", error);
         }
     }
 
-    // Controleer elke 5 seconden
-    setInterval(checkStatus, 5000);
-    // Voer ook direct uit bij opstarten
+    setInterval(checkStatus, 30000);
     checkStatus();
 </script>
 </body>

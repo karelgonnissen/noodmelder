@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Live Noodmelder</title>
+    <link rel="manifest" href="manifest.json">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .card {
+            background: white;
+            padding: 2rem;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 90%;
+        }
+        .status-ok { color: #2ecc71; font-weight: bold; }
+        .status-alert { color: #e74c3c; font-weight: bold; animation: blink 1s infinite; }
+        @keyframes blink { 0% {opacity: 1;} 50% {opacity: 0.5;} 100% {opacity: 1;} }
+        button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h1>🚨 Live Noodmelder</h1>
+    <p id="status-text">Systeem is actief...</p>
+    <div id="meldingen">
+        <p class="status-ok">✅ Geen actieve meldingen</p>
+    </div>
+    <button onclick="requestNotifications()">Test Meldingen</button>
+    <p style="font-size: 0.8rem; color: #888; margin-top: 20px;">Laatste update: <span id="time">--:--:--</span></p>
+</div>
+
+<script>
+    // Update de tijd om te laten zien dat de app nog leeft
+    function updateTime() {
+        document.getElementById('time').innerText = new Date().toLocaleTimeString();
+    }
+    setInterval(updateTime, 1000);
+
+    // Vraag toestemming voor notificaties
+    function requestNotifications() {
+        Notification.requestPermission().then(permission => {
+            if (permission === "granted") {
+                new Notification("Noodmelder Actief", {
+                    body: "Je ontvangt nu live updates op je Chromebook.",
+                    icon: "icon.png"
+                });
+            }
+        });
+    }
+
+    // Hier kun je later een script toevoegen dat een JSON bestand van je GitHub leest
+    // Voor nu: ververs de hele pagina elke 60 seconden voor nieuwe data
+    setTimeout(function(){
+       location.reload();
+    }, 60000);
+
+    updateTime();
+</script>
+
+</body>
+</html>

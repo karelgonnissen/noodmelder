@@ -5,17 +5,14 @@
     <title>Noodmelder Control Center</title>
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background-color: #1a1a1a; color: white; display: flex; justify-content: center; padding-top: 50px; margin: 0; }
-        .container { background: #2c3e50; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 100%; max-width: 500px; }
+        .container { background: #2c3e50; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 100%; max-width: 500px; text-align: center; }
         h1 { margin-bottom: 20px; color: #ecf0f1; border-bottom: 2px solid #34495e; padding-bottom: 10px; }
         label { display: block; text-align: left; margin: 15px 0 5px; font-weight: bold; color: #bdc3c7; }
         select, input { width: 100%; padding: 12px; border-radius: 5px; border: none; margin-bottom: 10px; box-sizing: border-box; font-size: 1rem; }
         .btn { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; }
         .btn-alarm { background-color: #e74c3c; color: white; }
-        .btn-alarm:hover { background-color: #c0392b; }
         .btn-ok { background-color: #27ae60; color: white; }
-        .btn-ok:hover { background-color: #1e8449; }
-        #status-msg { margin-top: 20px; padding: 10px; border-radius: 5px; font-weight: bold; min-height: 20px; }
-        .loading { color: #f1c40f; font-style: italic; }
+        #status-msg { margin-top: 20px; padding: 10px; border-radius: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -26,63 +23,55 @@
     <label>Kies een snelbericht:</label>
     <select id="preset-messages" onchange="document.getElementById('custom-text').value = this.value">
         <option value="">-- Maak een keuze --</option>
-        <option value="🚨 BRANDALARM! Verlaat direct het gebouw via de nooduitgang.">🔥 Brandalarm</option>
-        <option value="🛡️ LOCKDOWN: Blijf in de lokalen en vergrendel de deuren.">🔒 Lockdown</option>
-        <option value="📢 TESTBERICHT: Het alarmsysteem wordt getest. Geen actie nodig.">🛠️ Test van het systeem</option>
-        <option value="⚠️ ONWEER: Blijf binnen tot nader bericht.">⛈️ Noodweer</option>
+        <option value="🚨 BRANDALARM! Verlaat direct het gebouw.">🔥 Brandalarm</option>
+        <option value="🛡️ LOCKDOWN: Blijf in de lokalen.">🔒 Lockdown</option>
+        <option value="📢 TESTBERICHT: Geen actie nodig.">🛠️ Testbericht</option>
     </select>
 
     <label>Eigen tekstbericht:</label>
-    <input type="text" id="custom-text" placeholder="Typ hier de melding voor de schermen...">
+    <input type="text" id="custom-text" placeholder="Typ hier de melding...">
 
     <button class="btn btn-alarm" onclick="sendToGithub('alarm')">ACTIVEER ALARM</button>
-    <button class="btn btn-ok" onclick="sendToGithub('ok')">RESET (ALLES VEILIG)</button>
+    <button class="btn btn-ok" onclick="sendToGithub('ok')">RESET NAAR VEILIG</button>
 
     <div id="status-msg"></div>
 </div>
 
 <script>
-    // --- CONFIGURATIE ---
-    // PLAK HIER JE TOKEN:
     const GITHUB_TOKEN = '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'; 
     const REPO_OWNER = 'karelgonnissen';
     const REPO_NAME = 'noodmelder';
     const FILE_PATH = 'melding.json';
 
-    // Functie om tekst met emoji's veilig om te zetten naar Base64
-    function utoa(str) {
-        return window.btoa(unescape(encodeURIComponent(str)));
+    // Nieuwe, moderne manier om tekst met emoji's om te zetten
+    function safeB64(str) {
+        const bytes = new TextEncoder().encode(str);
+        let binary = '';
+        const len = bytes.byteLength;
+        for (let i = 0; i < len; i++) {
+            binary += String.fromCharCode(bytes[i]);
+        }
+        return window.btoa(binary);
     }
 
     async function sendToGithub(statusType) {
         const msg = document.getElementById('custom-text').value;
         const statusDiv = document.getElementById('status-msg');
         
-        if (!msg) {
-            alert("Voer eerst een bericht in!");
-            return;
-        }
-
         statusDiv.innerText = "Bezig met verzenden...";
-        statusDiv.className = "loading";
+        statusDiv.style.color = "#f1c40f";
 
         try {
-            // 1. Haal de huidige SHA van het bestand op
             const getUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
             const getRes = await fetch(getUrl, {
                 headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
             });
-            
-            if (!getRes.ok) throw new Error("Kan melding.json niet vinden op GitHub.");
-            
             const getData = await getRes.json();
             const sha = getData.sha;
 
-            // 2. Maak de nieuwe JSON inhoud
             const jsonContent = JSON.stringify({ status: statusType, bericht: msg }, null, 2);
-            const b64Content = utoa(jsonContent);
+            const b64Content = safeB64(jsonContent);
 
-            // 3. Update het bestand op GitHub
             const putRes = await fetch(getUrl, {
                 method: 'PUT',
                 headers: {
@@ -90,26 +79,23 @@
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    message: `Update via dashboard (${statusType})`,
+                    message: `Update: ${statusType}`,
                     content: b64Content,
                     sha: sha
                 })
             });
 
             if (putRes.ok) {
-                statusDiv.innerText = "✅ Succes! De schermen springen binnen 30 sec om.";
+                statusDiv.innerText = "✅ Succes! Chromebooks worden bijgewerkt.";
                 statusDiv.style.color = "#27ae60";
             } else {
-                const errorData = await putRes.json();
-                throw new Error(errorData.message || "Fout bij opslaan.");
+                throw new Error("GitHub weigert de update.");
             }
         } catch (err) {
             statusDiv.innerText = "❌ Fout: " + err.message;
             statusDiv.style.color = "#e74c3c";
-            console.error(err);
         }
     }
 </script>
-
 </body>
 </html>

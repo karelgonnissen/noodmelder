@@ -2,73 +2,111 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Noodmelder Control Center</title>
+    <title>Noodmelder Dashboard</title>
     <style>
         body { font-family: 'Segoe UI', sans-serif; background-color: #1a1a1a; color: white; display: flex; justify-content: center; padding-top: 50px; }
         .container { background: #2c3e50; padding: 30px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.5); width: 400px; text-align: center; }
-        select, input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; box-sizing: border-box; }
+        
+        /* Hier zorgen we dat de tekst in de vakken altijd leesbaar (zwart) is */
+        select, input { 
+            width: 100%; 
+            padding: 12px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+            border: 2px solid #34495e; 
+            box-sizing: border-box; 
+            font-size: 1rem;
+            background-color: #ecf0f1; /* Lichtgrijs/witachtige achtergrond */
+            color: #000000;            /* GEGARANDEERD ZWARTE TEKST */
+        }
+        
+        h1 { color: #ecf0f1; margin-bottom: 20px; }
+        label { display: block; text-align: left; margin-top: 15px; color: #bdc3c7; }
+        
         .btn { width: 100%; padding: 15px; border: none; border-radius: 8px; font-size: 1.2rem; font-weight: bold; cursor: pointer; margin-top: 10px; }
         .btn-alarm { background-color: #e74c3c; color: white; }
         .btn-ok { background-color: #27ae60; color: white; }
-        #status-msg { margin-top: 20px; font-weight: bold; }
+        #status-msg { margin-top: 20px; font-weight: bold; min-height: 24px; }
     </style>
 </head>
 <body>
 
 <div class="container">
     <h1>🚨 Noodmelder</h1>
-    <label>Bericht:</label>
+    
+    <label>Snelkeuze bericht:</label>
     <select onchange="document.getElementById('custom-text').value = this.value">
-        <option value="">-- Kies --</option>
-        <option value="🚨 BRANDALARM! Verlaat het gebouw.">🔥 Brandalarm</option>
-        <option value="🛡️ LOCKDOWN: Blijf in de lokalen.">🔒 Lockdown</option>
+        <option value="">-- Maak een keuze --</option>
+        <option value="🚨 BRANDALARM! Verlaat direct het gebouw.">🔥 Brandalarm</option>
+        <option value="🛡️ LOCKDOWN: Blijf in de lokalen en sluit deuren.">🔒 Lockdown</option>
         <option value="📢 TESTBERICHT: Geen actie nodig.">🛠️ Testbericht</option>
     </select>
-    <input type="text" id="custom-text" placeholder="Of typ hier zelf...">
+    
+    <label>Zelf typen:</label>
+    <input type="text" id="custom-text" placeholder="Typ hier de melding...">
     
     <button class="btn btn-alarm" onclick="updateMelding('alarm')">ACTIVEER ALARM</button>
-    <button class="btn btn-ok" onclick="updateMelding('ok')">RESET (VEILIG)</button>
+    <button class="btn btn-ok" onclick="updateMelding('ok')">RESET (ALLES VEILIG)</button>
+    
     <div id="status-msg"></div>
 </div>
 
 <script>
-    const REPO = 'karelgonnissen/noodmelder';
-    const FILE = 'melding.json';
-
     async function updateMelding(statusType) {
         const msg = document.getElementById('custom-text').value;
         const statusDiv = document.getElementById('status-msg');
         
-        // Vraag om de token als die nog niet bekend is
-        let token = sessionStorage.getItem('gh_token');
-        if (!token) {
-            token = prompt("Voer je GitHub Token in (ghp_...):");
-            if (!token) return;
-            sessionStorage.setItem('gh_token', token);
+        if (!msg && statusType === 'alarm') {
+            alert("Voer eerst een bericht in!");
+            return;
         }
 
-        statusDiv.innerText = "Bezig...";
+        let token = sessionStorage.getItem('gh_token');
+        if (!token) {
+            token = prompt("Plak hier je NIEUWE GitHub Token (ghp_...):");
+            if (!token) return;
+            sessionStorage.setItem('gh_token', token.trim());
+        }
+
+        statusDiv.innerText = "Bezig met verzenden...";
+        statusDiv.style.color = "#f1c40f";
         
         try {
-            const url = `https://api.github.com/repos/${REPO}/contents/${FILE}`;
-            const res = await fetch(url, { headers: { 'Authorization': `token ${token}` } });
-            if (res.status === 401) { sessionStorage.removeItem('gh_token'); throw new Error("Token ongeldig."); }
+            const url = `https://api.github.com/repos/karelgonnissen/noodmelder/contents/melding.json`;
+            const res = await fetch(url, { 
+                headers: { 'Authorization': `token ${token.trim()}` } 
+            });
+            
+            if (res.status === 401) {
+                sessionStorage.removeItem('gh_token');
+                throw new Error("Token ongeldig. Vernieuw de pagina.");
+            }
+            
             const data = await res.json();
-
-            const content = btoa(unescape(encodeURIComponent(JSON.stringify({ status: statusType, bericht: msg }))));
+            const jsonStr = JSON.stringify({ status: statusType, bericht: msg });
+            const content = btoa(unescape(encodeURIComponent(jsonStr)));
 
             const putRes = await fetch(url, {
                 method: 'PUT',
-                headers: { 'Authorization': `token ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: "Update", content: content, sha: data.sha })
+                headers: { 
+                    'Authorization': `token ${token.trim()}`, 
+                    'Content-Type': 'application/json' 
+                },
+                body: JSON.stringify({ 
+                    message: "Update via dashboard", 
+                    content: content, 
+                    sha: data.sha 
+                })
             });
 
             if (putRes.ok) {
-                statusDiv.innerText = "✅ Succesvol bijgewerkt!";
+                statusDiv.innerText = "✅ GELUKT! Schermen worden bijgewerkt.";
                 statusDiv.style.color = "#27ae60";
-            } else { throw new Error("Update mislukt."); }
+            } else {
+                throw new Error("GitHub fout.");
+            }
         } catch (err) {
-            statusDiv.innerText = "❌ Fout: " + err.message;
+            statusDiv.innerText = "❌ " + err.message;
             statusDiv.style.color = "#e74c3c";
         }
     }

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Live Noodmelder",
-  "version": "7.0",
+  "version": "8.0",
   "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA1jLX2MNh4UBEyly8nbRcDiZxx+C83zHesUFBXgW4+rlxdrNcb6cnAW2UHO2lH5dJVxwatuIwoB/bxA/vKHHT+zjjlW1TWiICCIGcgAx5gOOOoTEx1oCbqESweGUOW21ziHvMrFwmRgLIZ1FDkCfCItRsfJLSa6BIj2Nr08xamV+4u3hv/Mzkl07YKZ42SneuAan33DEzW1LG23E2mGoRfZrXpuTL03w3f2hKDZBUYav9arIHdHz6iFp8PyG1hyAsHfjuoK8Y2uryBT6k0eOVytoiPw+nniIi0jmtMwsQnq0cBwZYsbvR3XAvEJNu8YiAKWxhMSPOn/X5BL9AeEyRmwIDAQAB",
   "permissions": ["alarms", "storage", "tabs", "scripting"],
   "host_permissions": ["<all_urls>"],

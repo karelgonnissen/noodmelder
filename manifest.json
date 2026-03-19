@@ -1,21 +1,12 @@
 {
-  "manifest_version": 3,
   "name": "Live Noodmelder",
-  "version": "10.0",
-  "description": "Ontvang live noodmeldingen op je Chromebook.",
-  "background": {
-    "service_worker": "background.js"
-  },
-  "action": {
-    "default_popup": "popup.html"
-  },
-  "permissions": [
-    "alarms",
-    "storage",
-    "notifications",
-    "scripting"
-  ],
-  "host_permissions": [
-    "<all_urls>"
-  ]
+  "short_name": "Noodmelder",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "icons": [{
+    "src": "icon.png",
+    "sizes": "512x512",
+    "type": "image/png"
+  }]
 }

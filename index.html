@@ -2,81 +2,67 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Live Noodmelder</title>
     <link rel="manifest" href="manifest.json">
     <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: #f0f2f5;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
-        }
-        .card {
-            background: white;
-            padding: 2rem;
-            border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            text-align: center;
-            max-width: 400px;
-            width: 90%;
-        }
-        .status-ok { color: #2ecc71; font-weight: bold; }
-        .status-alert { color: #e74c3c; font-weight: bold; animation: blink 1s infinite; }
-        @keyframes blink { 0% {opacity: 1;} 50% {opacity: 0.5;} 100% {opacity: 1;} }
-        button {
-            background-color: #3498db;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-top: 10px;
-        }
+        body { font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; transition: background 0.5s; }
+        .card { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); text-align: center; width: 80%; }
+        .alarm { background-color: #e74c3c !important; color: white; }
+        .alarm .card { border: 5px solid white; }
+        h1 { font-size: 3rem; }
+        #bericht { font-size: 1.5rem; margin: 20px 0; }
+        .blink { animation: blinker 1s linear infinite; }
+        @keyframes blinker { 50% { opacity: 0; } }
     </style>
 </head>
 <body>
 
 <div class="card">
-    <h1>🚨 Live Noodmelder</h1>
-    <p id="status-text">Systeem is actief...</p>
-    <div id="meldingen">
-        <p class="status-ok">✅ Geen actieve meldingen</p>
-    </div>
-    <button onclick="requestNotifications()">Test Meldingen</button>
-    <p style="font-size: 0.8rem; color: #888; margin-top: 20px;">Laatste update: <span id="time">--:--:--</span></p>
+    <h1 id="header">✅ Systeem OK</h1>
+    <p id="bericht">Bezig met laden van status...</p>
+    <p style="font-size: 0.8rem; color: #888;">Laatst gecontroleerd: <span id="last-check">--:--</span></p>
 </div>
 
+<audio id="alarm-sound" src="https://actions.google.com/sounds/v1/alarms/emergency_it_is_an_emergency.ogg"></audio>
+
 <script>
-    // Update de tijd om te laten zien dat de app nog leeft
-    function updateTime() {
-        document.getElementById('time').innerText = new Date().toLocaleTimeString();
-    }
-    setInterval(updateTime, 1000);
+    const statusUrl = 'melding.json'; // Pakt het bestand uit dezelfde map
 
-    // Vraag toestemming voor notificaties
-    function requestNotifications() {
-        Notification.requestPermission().then(permission => {
-            if (permission === "granted") {
-                new Notification("Noodmelder Actief", {
-                    body: "Je ontvangt nu live updates op je Chromebook.",
-                    icon: "icon.png"
-                });
+    async function checkStatus() {
+        try {
+            // Voorkom dat de browser een oude versie uit het geheugen pakt (cache-busting)
+            const response = await fetch(statusUrl + '?t=' + new Date().getTime());
+            const data = await response.json();
+            
+            const body = document.body;
+            const header = document.getElementById('header');
+            const berichtText = document.getElementById('bericht');
+            const sound = document.getElementById('alarm-sound');
+
+            if (data.status === "alarm") {
+                body.className = "alarm";
+                header.innerText = "🚨 NOODSITUATIE";
+                header.classList.add("blink");
+                berichtText.innerText = data.bericht;
+                sound.play(); // Speelt alarmgeluid af
+            } else {
+                body.className = "";
+                header.innerText = "✅ Systeem OK";
+                header.classList.remove("blink");
+                berichtText.innerText = data.bericht;
+                sound.pause();
+                sound.currentTime = 0;
             }
-        });
+            document.getElementById('last-check').innerText = new Date().toLocaleTimeString();
+        } catch (error) {
+            console.error("Fout bij ophalen status:", error);
+        }
     }
 
-    // Hier kun je later een script toevoegen dat een JSON bestand van je GitHub leest
-    // Voor nu: ververs de hele pagina elke 60 seconden voor nieuwe data
-    setTimeout(function(){
-       location.reload();
-    }, 60000);
-
-    updateTime();
+    // Controleer elke 30 seconden
+    setInterval(checkStatus, 30000);
+    // Voer ook direct uit bij opstarten
+    checkStatus();
 </script>
-
 </body>
 </html>

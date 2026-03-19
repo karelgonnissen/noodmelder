@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Live Noodmelder",
-  "version": "9.0",
+  "version": "10.0",
   "description": "Ontvang live noodmeldingen op je Chromebook.",
   "background": {
     "service_worker": "background.js"
@@ -12,7 +12,8 @@
   "permissions": [
     "alarms",
     "storage",
-    "notifications"
+    "notifications",
+    "scripting"
   ],
   "host_permissions": [
     "<all_urls>"

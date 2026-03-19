@@ -1,4 +1,4 @@
 {
-  "status": "alarm",
-  "bericht": "TEST ALARM: Iedereen verzamelen op de speelplaats!"
+  "status": "ok",
+  "bericht": "Systeem is operationeel. Geen meldingen."
 }

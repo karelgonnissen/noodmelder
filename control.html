@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <title>Noodmelder Dashboard</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; padding: 50px; background: #2c3e50; color: white; }
+        .btn { padding: 20px 40px; font-size: 1.5rem; cursor: pointer; border: none; border-radius: 10px; margin: 10px; }
+        .btn-alarm { background: #e74c3c; color: white; }
+        .btn-ok { background: #27ae60; color: white; }
+        #output { background: #ecf0f1; color: #333; padding: 20px; border-radius: 10px; margin-top: 30px; display: none; }
+        pre { text-align: left; background: #ddd; padding: 10px; }
+    </style>
+</head>
+<body>
+    <h1>Control Center Noodmelder</h1>
+    <p>Kies de status en kopieer de code naar melding.json</p>
+    
+    <button class="btn btn-alarm" onclick="generate('alarm', '🚨 BRANDALARM! Verlaat direct het gebouw.')">ACTIVEER ALARM</button>
+    <button class="btn btn-ok" onclick="generate('ok', 'Systeem is operationeel. Geen meldingen.')">RESET NAAR OK</button>
+
+    <div id="output">
+        <h3>Kopieer deze code naar melding.json:</h3>
+        <pre id="json-code"></pre>
+        <button onclick="copyCode()">Kopieer Code</button>
+        <p><a id="gh-link" href="#" target="_blank" style="color: #3498db;">Klik hier om direct naar melding.json op GitHub te gaan</a></p>
+    </div>
+
+    <script>
+        // Vul hier je eigen gebruikersnaam en repo naam in voor de snelle link!
+        const githubRepoUrl = "https://github.com/karelgonnissen/noodmelder/edit/main/melding.json";
+
+        function generate(status, msg) {
+            const obj = { "status": status, "bericht": msg };
+            const jsonStr = JSON.stringify(obj, null, 2);
+            document.getElementById('json-code').innerText = jsonStr;
+            document.getElementById('output').style.display = 'block';
+            document.getElementById('gh-link').href = githubRepoUrl;
+        }
+
+        function copyCode() {
+            const code = document.getElementById('json-code').innerText;
+            navigator.clipboard.writeText(code);
+            alert("Code gekopieerd! Plak het nu in GitHub.");
+        }
+    </script>
+</body>
+</html>

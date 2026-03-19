@@ -3,71 +3,66 @@
 <head>
     <meta charset="UTF-8">
     <title>Live Noodmelder</title>
-    <link rel="manifest" href="manifest.json">
     <style>
-        /* Basis instellingen */
-        body { 
-            font-family: 'Segoe UI', sans-serif; 
-            display: flex; 
-            justify-content: center; 
-            align-items: center; 
-            height: 100vh; 
-            margin: 0; 
-            transition: background 0.3s; 
-            background-color: #f4f4f4;
-        }
-
-        /* De witte kaart in het midden */
-        .card { 
-            background: white; 
-            padding: 40px; 
-            border-radius: 25px; 
-            box-shadow: 0 15px 35px rgba(0,0,0,0.3); 
-            text-align: center; 
-            width: 85%; 
-            max-width: 700px;
-            color: #333; /* FORCEER DONKERE TEKST OP WITTE KAART */
-        }
-
-        /* Alarm stand voor de achtergrond */
-        .alarm-bg { 
-            background-color: #e74c3c !important; 
-        }
-
-        /* Tekst stijlen */
-        h1 { font-size: 3.5rem; margin: 10px 0; color: #2c3e50; }
-        .alarm-bg h1 { color: #c0392b; } /* Donkerrood in de witte kaart bij alarm */
-        
-        #bericht { 
-            font-size: 2rem; 
-            margin: 25px 0; 
-            line-height: 1.4;
-            font-weight: bold;
-            color: #000; /* ALTIJD ZWART */
-        }
-
+        body { font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; transition: background 0.5s; background-color: #2c3e50; color: white; }
+        .card { background: white; padding: 40px; border-radius: 25px; box-shadow: 0 15px 35px rgba(0,0,0,0.3); text-align: center; width: 85%; max-width: 700px; color: #333; position: relative; }
+        .alarm-bg { background-color: #e74c3c !important; }
+        h1 { font-size: 3rem; margin: 10px 0; }
+        #bericht { font-size: 2rem; margin: 25px 0; font-weight: bold; color: #000; }
         .status-footer { font-size: 0.9rem; color: #7f8c8d; margin-top: 20px; }
-
-        /* Knipperen van de kaart bij alarm */
-        .blink-border { 
-            border: 10px solid #e74c3c;
-            animation: blinker 1s linear infinite; 
-        }
+        
+        /* Overlay om interactie te dwingen voor geluid/popups */
+        #overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; }
+        #overlay button { padding: 20px 40px; font-size: 1.5rem; cursor: pointer; border-radius: 10px; border: none; background: #27ae60; color: white; font-weight: bold; }
+        
+        .blink-border { border: 15px solid #e74c3c; animation: blinker 1s linear infinite; }
         @keyframes blinker { 50% { border-color: transparent; } }
     </style>
 </head>
 <body id="bg">
 
-<div class="card" id="main-card">
-    <h1 id="header">✅ Systeem OK</h1>
-    <div id="bericht">Bezig met laden van status...</div>
-    <div class="status-footer">Laatst gecontroleerd: <span id="last-check">--:--:--</span></div>
+<div id="overlay">
+    <h2>Noodmelder Systeem</h2>
+    <p>Klik op de knop om de beveiliging en audio te activeren.</p>
+    <button onclick="startSysteem()">SYSTEEM ACTIVEREN</button>
 </div>
 
-<audio id="alarm-sound" src="https://actions.google.com/sounds/v1/alarms/emergency_it_is_an_emergency.ogg"></audio>
+<div class="card" id="main-card">
+    <h1 id="header">Laden...</h1>
+    <div id="bericht">Wacht op activatie...</div>
+    <div class="status-footer">Check: <span id="last-check">--:--</span></div>
+</div>
+
+<audio id="alarm-sound" loop>
+    <source src="https://assets.mixkit.co/active_storage/sfx/951/951-preview.mp3" type="audio/mpeg">
+</audio>
 
 <script>
+    let systeemActief = false;
+    let laatsteStatus = "ok";
+
+    function startSysteem() {
+        systeemActief = true;
+        document.getElementById('overlay').style.display = 'none';
+        
+        // Vraag toestemming voor popups
+        if ("Notification" in window) {
+            Notification.requestPermission();
+        }
+        
+        // Test geluid even kort (leeg) om browser 'vrij' te geven
+        const sound = document.getElementById('alarm-sound');
+        sound.play().then(() => {
+            sound.pause();
+            sound.currentTime = 0;
+        }).catch(e => console.log("Audio kickstart nodig"));
+        
+        checkStatus();
+    }
+
     async function checkStatus() {
+        if (!systeemActief) return;
+
         try {
             const response = await fetch('melding.json?t=' + new Date().getTime());
             const data = await response.json();
@@ -83,23 +78,30 @@
                 card.classList.add("blink-border");
                 header.innerText = "🚨 NOODSITUATIE";
                 berichtText.innerText = data.bericht;
-                sound.play();
+
+                if (laatsteStatus !== "alarm") {
+                    sound.play();
+                    if (Notification.permission === "granted") {
+                        new Notification("🚨 ALARM!", { body: data.bericht, requireInteraction: true });
+                    }
+                }
+                laatsteStatus = "alarm";
             } else {
                 body.classList.remove("alarm-bg");
                 card.classList.remove("blink-border");
                 header.innerText = "✅ Systeem OK";
-                berichtText.innerText = data.bericht;
+                berichtText.innerText = data.bericht || "Geen actieve meldingen.";
                 sound.pause();
                 sound.currentTime = 0;
+                laatsteStatus = "ok";
             }
             document.getElementById('last-check').innerText = new Date().toLocaleTimeString();
         } catch (error) {
-            console.error("Status check mislukt", error);
+            console.error("Fout bij ophalen status");
         }
     }
 
-    setInterval(checkStatus, 5000);
-    checkStatus();
+    setInterval(checkStatus, 15000); // We zetten hem naar 15 sec voor snellere reactie
 </script>
 </body>
 </html>

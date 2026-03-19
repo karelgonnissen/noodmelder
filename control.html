@@ -2,47 +2,99 @@
 <html lang="nl">
 <head>
     <meta charset="UTF-8">
-    <title>Noodmelder Dashboard</title>
+    <title>Noodmelder One-Click Dashboard</title>
     <style>
-        body { font-family: sans-serif; text-align: center; padding: 50px; background: #2c3e50; color: white; }
-        .btn { padding: 20px 40px; font-size: 1.5rem; cursor: pointer; border: none; border-radius: 10px; margin: 10px; }
+        body { font-family: 'Segoe UI', sans-serif; text-align: center; padding: 40px; background: #1a1a1a; color: white; }
+        .container { max-width: 600px; margin: auto; background: #2c3e50; padding: 30px; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        select, input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 5px; border: none; font-size: 1rem; }
+        .btn { width: 100%; padding: 15px; font-size: 1.2rem; cursor: pointer; border: none; border-radius: 8px; margin-top: 10px; font-weight: bold; transition: 0.3s; }
         .btn-alarm { background: #e74c3c; color: white; }
+        .btn-alarm:hover { background: #c0392b; }
         .btn-ok { background: #27ae60; color: white; }
-        #output { background: #ecf0f1; color: #333; padding: 20px; border-radius: 10px; margin-top: 30px; display: none; }
-        pre { text-align: left; background: #ddd; padding: 10px; }
+        .btn-ok:hover { background: #1e8449; }
+        #status-msg { margin-top: 20px; font-weight: bold; }
+        .loader { display: none; color: #f1c40f; margin-top: 10px; }
     </style>
 </head>
 <body>
-    <h1>Control Center Noodmelder</h1>
-    <p>Kies de status en kopieer de code naar melding.json</p>
+
+<div class="container">
+    <h1>🚨 Noodmelder Control</h1>
     
-    <button class="btn btn-alarm" onclick="generate('alarm', '🚨 BRANDALARM! Verlaat direct het gebouw.')">ACTIVEER ALARM</button>
-    <button class="btn btn-ok" onclick="generate('ok', 'Systeem is operationeel. Geen meldingen.')">RESET NAAR OK</button>
+    <label>Kies een voorgedefinieerd bericht:</label>
+    <select id="preset-messages" onchange="document.getElementById('custom-text').value = this.value">
+        <option value="Systeem is operationeel. Geen meldingen.">-- Kies een bericht --</option>
+        <option value="🚨 BRANDALARM! Verlaat direct het gebouw via de dichtstbijzijnde uitgang.">🔥 Brandalarm</option>
+        <option value="📢 TESTBERICHT: De noodmelder wordt getest. U hoeft niets te doen.">🛠 Testbericht</option>
+        <option value="🛡️ LOCKDOWN: Blijf in de lokalen en sluit de deuren.">🔒 Lockdown</option>
+        <option value="⚠️ ONWEER: Blijf binnen tot nader bericht.">⛈️ Onweer/Noodweer</option>
+    </select>
 
-    <div id="output">
-        <h3>Kopieer deze code naar melding.json:</h3>
-        <pre id="json-code"></pre>
-        <button onclick="copyCode()">Kopieer Code</button>
-        <p><a id="gh-link" href="#" target="_blank" style="color: #3498db;">Klik hier om direct naar melding.json op GitHub te gaan</a></p>
-    </div>
+    <label>Of typ zelf een bericht:</label>
+    <input type="text" id="custom-text" placeholder="Typ hier je eigen bericht...">
 
-    <script>
-        // Vul hier je eigen gebruikersnaam en repo naam in voor de snelle link!
-        const githubRepoUrl = "https://github.com/karelgonnissen/noodmelder/edit/main/melding.json";
+    <button class="btn btn-alarm" onclick="sendToGithub('alarm')">ACTIVEER ALARM</button>
+    <button class="btn btn-ok" onclick="sendToGithub('ok')">RESET NAAR VEILIG</button>
 
-        function generate(status, msg) {
-            const obj = { "status": status, "bericht": msg };
-            const jsonStr = JSON.stringify(obj, null, 2);
-            document.getElementById('json-code').innerText = jsonStr;
-            document.getElementById('output').style.display = 'block';
-            document.getElementById('gh-link').href = githubRepoUrl;
+    <div id="loader" class="loader">Bezig met bijwerken van alle Chromebooks...</div>
+    <div id="status-msg"></div>
+</div>
+
+<script>
+    // --- CONFIGURATIE (VUL DIT IN) ---
+    const GITHUB_TOKEN = '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'; 
+    const REPO_OWNER = 'karelgonnissen';
+    const REPO_NAME = 'noodmelder';
+    const FILE_PATH = 'melding.json';
+
+    async function sendToGithub(statusType) {
+        const msg = document.getElementById('custom-text').value;
+        const statusDiv = document.getElementById('status-msg');
+        const loader = document.getElementById('loader');
+
+        statusDiv.innerText = "";
+        loader.style.display = "block";
+
+        try {
+            // 1. Haal de huidige 'sha' van het bestand op (nodig voor GitHub API)
+            const getUrl = `https://api.github.com/repos/${REPO_OWNER}/${REPO_NAME}/contents/${FILE_PATH}`;
+            const getRes = await fetch(getUrl, {
+                headers: { 'Authorization': `token ${GITHUB_TOKEN}` }
+            });
+            const getData = await getRes.json();
+            const sha = getData.sha;
+
+            // 2. Bereid de nieuwe inhoud voor
+            const newContent = btoa(JSON.stringify({ status: statusType, bericht: msg }, null, 2));
+
+            // 3. Update het bestand op GitHub
+            const putRes = await fetch(getUrl, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `token ${GITHUB_TOKEN}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    message: `Status update: ${statusType}`,
+                    content: newContent,
+                    sha: sha
+                })
+            });
+
+            if (putRes.ok) {
+                statusDiv.style.color = "#27ae60";
+                statusDiv.innerText = "✅ Succes! De Chromebooks worden binnen 30 sec bijgewerkt.";
+            } else {
+                throw new Error("Update mislukt.");
+            }
+        } catch (err) {
+            statusDiv.style.color = "#e74c3c";
+            statusDiv.innerText = "❌ Fout: " + err.message + ". Check je Token!";
+        } finally {
+            loader.style.display = "none";
         }
+    }
+</script>
 
-        function copyCode() {
-            const code = document.getElementById('json-code').innerText;
-            navigator.clipboard.writeText(code);
-            alert("Code gekopieerd! Plak het nu in GitHub.");
-        }
-    </script>
 </body>
 </html>

@@ -1,12 +1,17 @@
 {
   "name": "Live Noodmelder",
   "short_name": "Noodmelder",
-  "start_url": "index.html",
+  "description": "Ontvang live noodmeldingen.",
+  "start_url": ".",
   "display": "standalone",
   "background_color": "#ffffff",
-  "icons": [{
-    "src": "icon.png",
-    "sizes": "512x512",
-    "type": "image/png"
-  }]
+  "theme_color": "#e74c3c",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
 }
